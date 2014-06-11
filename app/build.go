@@ -30,19 +30,23 @@ func ConditionallyBuild(version, dockerFile string) (VersionImage, error) {
 	}
 
 	if ver.Version != version {
-		utils.LogMessage("Image version: %s\r\n", ver.Version)
+		if len(ver.Version) != 0 {
+			utils.LogMessage("Image version: %s\r\n", ver.Version)
+		} else {
+			utils.LogMessage("Building version: %s\r\n", version)
+		}
 		uploaded, err := UploadImage(version, dockerFile)
 		if err != nil {
 			return VersionImage{}, err
 		}
 
-		utils.LogMessage("\tUploaded: %s\r\n", uploaded.Image.ID)
+		utils.LogMessage("Uploaded: %s\r\n", uploaded.Image.ID)
 		return uploaded, nil
 	} else {
 		utils.LogMessage("Server has current version (%s)\r\n", ver.Version)
 	}
 
-	return VersionImage{}, nil
+	return ver, nil
 }
 
 func GetCurrentVersion() (VersionImage, error) {
@@ -128,11 +132,13 @@ func UploadImage(version, dockerFile string) (VersionImage, error) {
 		OutputStream: outBuf,
 	}
 
-	outBuf.WriteString("\r\n")
-	outBuf.Flush()
 	if err := remote.DockerClient.BuildImage(opts); err != nil {
 		return VersionImage{}, err
 	}
+
+	outBuf.WriteString("\033[0m")
+	outBuf.WriteString("\r\n")
+	outBuf.Flush()
 
 	cur, err := GetCurrentVersion()
 

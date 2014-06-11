@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"github.com/callumj/docker-mate/remote"
 	"github.com/callumj/docker-mate/utils"
 	"github.com/jessevdk/go-flags"
@@ -54,7 +55,24 @@ func beginMigrating(dockerFileDirectory string) error {
 		utils.QuitSuccess()
 	}
 
-	SpinUpContainer(vers)
+	var containerConf ContainerConfig
+
+	attributesPath := fmt.Sprintf("%s/attributes.yml", dockerFileDirectory)
+	if utils.PathExists(attributesPath) {
+		recConf, err := ParseContainerConfig(attributesPath)
+		if err != nil {
+			return err
+		} else {
+			utils.LogMessage("Using %s\r\n", attributesPath)
+		}
+		containerConf = recConf
+	} else {
+		containerConf = ContainerConfig{}
+	}
+
+	containerConf.Image = vers
+
+	SpinUpContainer(containerConf)
 
 	return nil
 }
