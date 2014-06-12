@@ -47,11 +47,19 @@ func SpinUpContainer(conf ContainerConfig) error {
 	} else {
 		if len(res.OtherVersionIds) > 0 {
 			// drop the other containers
-			RemoveContainers(res.OtherVersionIds)
+			err = RemoveContainers(res.OtherVersionIds)
+			if err != nil {
+				return err
+			}
 		}
 
 		// deploy the container
-		CreateContainer(conf)
+		utils.LogMessage("Creating container\r\n")
+		_, err = CreateContainer(conf)
+
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -99,6 +107,17 @@ func RemoveContainers(containerIds []string) error {
 	return nil
 }
 
-func CreateContainer(conf ContainerConfig) {
-	utils.LogMessage("%v\n\n", conf)
+func CreateContainer(conf ContainerConfig) (docker.Container, error) {
+	conf.Attributes.Image = conf.Image.Image.ID
+	opts := docker.CreateContainerOptions{
+		Name:   utils.GlobalOptions.Name,
+		Config: conf.Attributes,
+	}
+	resp, err := remote.DockerClient.CreateContainer(opts)
+
+	if err != nil {
+		return docker.Container{}, err
+	}
+
+	return *resp, err
 }

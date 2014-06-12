@@ -72,7 +72,11 @@ func beginMigrating(dockerFileDirectory string) error {
 
 	containerConf.Image = vers
 
-	SpinUpContainer(containerConf)
+	err = SpinUpContainer(containerConf)
+
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
