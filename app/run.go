@@ -2,8 +2,8 @@ package app
 
 import (
 	"fmt"
-	"github.com/callumj/docker-mate/remote"
-	"github.com/callumj/docker-mate/utils"
+	"github.com/callumj/busan/remote"
+	"github.com/callumj/busan/utils"
 	"github.com/jessevdk/go-flags"
 )
 
@@ -15,7 +15,7 @@ func Run(args []string) {
 	}
 
 	if len(args) == 1 {
-		utils.LogMessage("Usage: %s [OPTIONS] DOCKER_FILE_DIRECTORY", args[0])
+		utils.LogMessage("Usage: %s [OPTIONS] DOCKER_FILE_DIRECTORY\r\n", args[0])
 		utils.QuitFatal()
 	}
 

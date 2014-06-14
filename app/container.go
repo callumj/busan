@@ -2,8 +2,8 @@ package app
 
 import (
 	"fmt"
-	"github.com/callumj/docker-mate/remote"
-	"github.com/callumj/docker-mate/utils"
+	"github.com/callumj/busan/remote"
+	"github.com/callumj/busan/utils"
 	"github.com/fsouza/go-dockerclient"
 	"gopkg.in/yaml.v1"
 	"io/ioutil"

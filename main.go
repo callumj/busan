@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/callumj/docker-mate/app"
+	"github.com/callumj/busan/app"
 	"os"
 )
 

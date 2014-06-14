@@ -6,8 +6,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/callumj/docker-mate/remote"
-	"github.com/callumj/docker-mate/utils"
+	"github.com/callumj/busan/remote"
+	"github.com/callumj/busan/utils"
 	"github.com/fsouza/go-dockerclient"
 	"io"
 	"os"
@@ -25,7 +25,7 @@ type VersionImage struct {
 }
 
 func ConditionallyBuild(version, dockerFile string) (VersionImage, error) {
-	ver, err := GetCurrentVersion()
+	ver, err := GetVersionMatching(version)
 	if err != nil {
 		return VersionImage{}, err
 	}
@@ -72,12 +72,14 @@ func GetImageMatchingVersion(verImg string) (VersionImage, error) {
 	return VersionImage{}, nil
 }
 
-func GetCurrentVersion() (VersionImage, error) {
+func GetVersionMatching(expectingVersion string) (VersionImage, error) {
 	var received *VersionImage
 	err := loopOnFoundImages(func(ver string, img docker.APIImages) {
-		received = &VersionImage{
-			Image:   img,
-			Version: ver,
+		if ver == expectingVersion {
+			received = &VersionImage{
+				Image:   img,
+				Version: ver,
+			}
 		}
 	})
 
@@ -170,7 +172,7 @@ func UploadImage(version, dockerFile string) (VersionImage, error) {
 func RemoveImagesNotAt(version, imgId string) error {
 	err := loopOnFoundImages(func(ver string, img docker.APIImages) {
 		if ver != version && img.ID != imgId {
-			utils.LogMessage("Removing %v\r\n", img.Tag)
+			utils.LogMessage("Removing %v\r\n", img.ID)
 			remote.DockerClient.RemoveImage(img.ID)
 		} else if ver != version && img.ID == imgId {
 			utils.LogMessage("Will not delete %v as the ID is the same, please clean manually\r\n", img.RepoTags)
