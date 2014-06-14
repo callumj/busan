@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/callumj/docker-mate/remote"
 	"github.com/callumj/docker-mate/utils"
@@ -47,6 +48,28 @@ func ConditionallyBuild(version, dockerFile string) (VersionImage, error) {
 	}
 
 	return ver, nil
+}
+
+func GetImageMatchingVersion(verImg string) (VersionImage, error) {
+	var received *VersionImage
+	err := loopOnFoundImages(func(ver string, img docker.APIImages) {
+		if ver == verImg {
+			received = &VersionImage{
+				Image:   img,
+				Version: ver,
+			}
+		}
+	})
+
+	if err != nil {
+		return VersionImage{}, err
+	}
+
+	if received != nil {
+		return *received, nil
+	}
+
+	return VersionImage{}, nil
 }
 
 func GetCurrentVersion() (VersionImage, error) {
@@ -133,10 +156,12 @@ func UploadImage(version, dockerFile string) (VersionImage, error) {
 	outBuf.WriteString("\r\n")
 	outBuf.Flush()
 
-	cur, err := GetCurrentVersion()
+	cur, err := GetImageMatchingVersion(version)
 
 	if err != nil {
 		return VersionImage{}, err
+	} else if len(cur.Version) == 0 {
+		return VersionImage{}, errors.New("Could not locate created image")
 	} else {
 		return cur, nil
 	}
