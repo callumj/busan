@@ -78,5 +78,11 @@ func beginMigrating(dockerFileDirectory string) error {
 		return err
 	}
 
+	err = RemoveImagesNotAt(vers.Version, vers.Image.ID)
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

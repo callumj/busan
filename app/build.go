@@ -50,27 +50,20 @@ func ConditionallyBuild(version, dockerFile string) (VersionImage, error) {
 }
 
 func GetCurrentVersion() (VersionImage, error) {
-	allImages, err := remote.DockerClient.ListImages(true)
+	var received *VersionImage
+	err := loopOnFoundImages(func(ver string, img docker.APIImages) {
+		received = &VersionImage{
+			Image:   img,
+			Version: ver,
+		}
+	})
+
 	if err != nil {
 		return VersionImage{}, err
 	}
 
-	for _, img := range allImages {
-		for _, tag := range img.RepoTags {
-			if strings.Index(tag, utils.GlobalOptions.Name) == 0 {
-				parts := strings.Split(tag, ":")
-				if len(parts) >= 2 {
-					ver := parts[1]
-					extracted := versionGrab.FindStringSubmatch(ver)
-					if len(extracted) >= 2 {
-						return VersionImage{
-							Image:   img,
-							Version: extracted[1],
-						}, nil
-					}
-				}
-			}
-		}
+	if received != nil {
+		return *received, nil
 	}
 
 	return VersionImage{}, nil
@@ -147,4 +140,43 @@ func UploadImage(version, dockerFile string) (VersionImage, error) {
 	} else {
 		return cur, nil
 	}
+}
+
+func RemoveImagesNotAt(version, imgId string) error {
+	err := loopOnFoundImages(func(ver string, img docker.APIImages) {
+		if ver != version && img.ID != imgId {
+			utils.LogMessage("Removing %v\r\n", img.Tag)
+			remote.DockerClient.RemoveImage(img.ID)
+		} else if ver != version && img.ID == imgId {
+			utils.LogMessage("Will not delete %v as the ID is the same, please clean manually\r\n", img.RepoTags)
+		}
+	})
+
+	return err
+}
+
+type onImageFind func(string, docker.APIImages)
+
+func loopOnFoundImages(callback onImageFind) error {
+	allImages, err := remote.DockerClient.ListImages(true)
+	if err != nil {
+		return err
+	}
+
+	for _, img := range allImages {
+		for _, tag := range img.RepoTags {
+			if strings.Index(tag, utils.GlobalOptions.Name) == 0 {
+				parts := strings.Split(tag, ":")
+				if len(parts) >= 2 {
+					ver := parts[1]
+					extracted := versionGrab.FindStringSubmatch(ver)
+					if len(extracted) >= 2 {
+						callback(extracted[1], img)
+					}
+				}
+			}
+		}
+	}
+
+	return nil
 }

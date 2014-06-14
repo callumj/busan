@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"github.com/callumj/docker-mate/remote"
 	"github.com/callumj/docker-mate/utils"
 	"github.com/fsouza/go-dockerclient"
@@ -9,8 +10,13 @@ import (
 	"strings"
 )
 
+type ContainerCreateConfig struct {
+	Volumes      map[string]string
+	ExposedPorts []string
+}
+
 type ContainerConfig struct {
-	Attributes *docker.Config
+	Attributes *ContainerCreateConfig
 	Image      VersionImage
 }
 
@@ -26,7 +32,7 @@ func ParseContainerConfig(attributesFilePath string) (ContainerConfig, error) {
 	}
 
 	target := ContainerConfig{}
-	attrTarget := docker.Config{}
+	attrTarget := ContainerCreateConfig{}
 	err = yaml.Unmarshal([]byte(fileContents), &attrTarget)
 	if err != nil {
 		return ContainerConfig{}, err
@@ -37,13 +43,13 @@ func ParseContainerConfig(attributesFilePath string) (ContainerConfig, error) {
 }
 
 func SpinUpContainer(conf ContainerConfig) error {
-	res, err := GetActiveContainers(conf.Image)
+	res, err := GetInstalledContainers(conf.Image)
 	if err != nil {
 		return err
 	}
 
 	if len(res.CurrentVersionId) != 0 {
-		utils.LogMessage("Latest container is already running %s\r\n", res.CurrentVersionId)
+		utils.LogMessage("Latest container is already installed %s\r\n", res.CurrentVersionId)
 	} else {
 		if len(res.OtherVersionIds) > 0 {
 			// drop the other containers
@@ -55,18 +61,35 @@ func SpinUpContainer(conf ContainerConfig) error {
 
 		// deploy the container
 		utils.LogMessage("Creating container\r\n")
-		_, err = CreateContainer(conf)
+		resp, err := CreateContainer(conf)
 
 		if err != nil {
 			return err
 		}
+
+		res = resp
 	}
 
-	return nil
+	// boot up the container if needed
+	isRunning, err := IsContainerRunning(res.CurrentVersionId)
+	if err != nil {
+		return err
+	}
+
+	if isRunning {
+		utils.LogMessage("Container %s is already running\r\n", res.CurrentVersionId)
+	} else {
+		err = StartContainer(res.CurrentVersionId, conf.Attributes)
+		if err == nil {
+			utils.LogMessage("Container %s is now up\r\n", res.CurrentVersionId)
+		}
+	}
+
+	return err
 }
 
 // Provides ability to see if we are running the latest container
-func GetActiveContainers(img VersionImage) (ActiveContainers, error) {
+func GetInstalledContainers(img VersionImage) (ActiveContainers, error) {
 	allContainers, err := remote.DockerClient.ListContainers(docker.ListContainersOptions{All: true})
 
 	if err != nil {
@@ -107,17 +130,71 @@ func RemoveContainers(containerIds []string) error {
 	return nil
 }
 
-func CreateContainer(conf ContainerConfig) (docker.Container, error) {
-	conf.Attributes.Image = conf.Image.Image.ID
+func CreateContainer(conf ContainerConfig) (ActiveContainers, error) {
+	nativeConf := docker.Config{}
+	if conf.Attributes != nil {
+		volumes := make(map[string]struct{})
+		var empty struct{}
+		for vol, _ := range conf.Attributes.Volumes {
+			volumes[vol] = empty
+		}
+		nativeConf.Volumes = volumes
+	}
+
+	nativeConf.Image = conf.Image.Image.ID
 	opts := docker.CreateContainerOptions{
 		Name:   utils.GlobalOptions.Name,
-		Config: conf.Attributes,
+		Config: &nativeConf,
 	}
 	resp, err := remote.DockerClient.CreateContainer(opts)
 
 	if err != nil {
-		return docker.Container{}, err
+		return ActiveContainers{}, err
 	}
 
-	return *resp, err
+	return ActiveContainers{CurrentVersionId: resp.ID}, err
+}
+
+func IsContainerRunning(conId string) (bool, error) {
+	running, err := remote.DockerClient.ListContainers(docker.ListContainersOptions{All: false})
+
+	if err != nil {
+		return false, err
+	}
+
+	for _, con := range running {
+		if con.ID == conId {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func StartContainer(conId string, config *ContainerCreateConfig) error {
+	nativeConf := docker.HostConfig{}
+	ports := make(map[docker.Port][]docker.PortBinding)
+	if config != nil {
+		var opts []string
+		for target, source := range config.Volumes {
+			splitted := strings.Split(source, ":")
+			var built string
+			if len(splitted) == 1 {
+				built = fmt.Sprintf("%v:%v", splitted[0], target)
+			} else {
+				built = fmt.Sprintf("%v:%v:%v", splitted[0], target, splitted[1])
+			}
+			opts = append(opts, built)
+		}
+		nativeConf.Binds = opts
+
+		for _, p := range config.ExposedPorts {
+			castedPort := docker.Port(p)
+			ports[castedPort] = []docker.PortBinding{}
+		}
+	}
+	nativeConf.PortBindings = ports
+
+	err := remote.DockerClient.StartContainer(conId, &nativeConf)
+	return err
 }
