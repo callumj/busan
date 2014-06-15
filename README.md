@@ -2,6 +2,8 @@
 
 A command line utility for creating versioned Docker images and containers with an automated upgrade process.
 
+Busan allows you to autonomously ensure your Docker environment is kept up to date and running based off your source Dockerfiles. In combination with [weave](https://github.com/callumj/weave) you can implement a continous deployment pipeline that keeps your Docker hosts in sync. 
+
 ## How it works
 
 Busan searches your `Dockerfile` for the `VERSION x.xx` comment and will ensure that your target Docker installation has both correct versioned image and correct running versioned container.
@@ -29,7 +31,7 @@ CONTAINER ID        IMAGE                                 COMMAND               
 11255c55312c        callumjcom-deploy:v0.10               /bin/sh -c /bin/bash   49 minutes ago      Up 49 minutes       80/tcp               callumjcom-deploy               
 ```
 
-By running `busan ~/DockerStuff/callumjcom-deploy` the system will ensure my image and container are brought up to the expect version.
+By running `busan ~/DockerStuff/callumjcom-deploy` the system will ensure my image and container are brought up to the expected version.
 
 
 ```
@@ -37,6 +39,8 @@ root@localhost:~# docker ps
 CONTAINER ID        IMAGE                                 COMMAND                CREATED             STATUS              PORTS                NAMES
 ec8ca4c8e802        callumjcom-deploy:v0.11               /bin/sh -c /bin/bash   49 minutes ago      Up 49 minutes       80/tcp               callumjcom-deploy               
 ```
+
+Busan will clean up old images where possible and remove all previous containers (if needed).
 
 ## Installation
 
