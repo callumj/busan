@@ -4,6 +4,8 @@ A command line utility for creating versioned Docker images and containers with 
 
 Busan allows you to autonomously ensure your Docker environment is kept up to date and running based off your source Dockerfiles. In combination with [weave](https://github.com/callumj/weave) you can implement a continous deployment pipeline that keeps your Docker hosts in sync. 
 
+Busan is named after the [largest port in South Korea](http://en.wikipedia.org/wiki/Busan_Port), in the city of Busan.
+
 ## How it works
 
 Busan searches your `Dockerfile` for the `VERSION x.xx` comment and will ensure that your target Docker installation has both correct versioned image and correct running versioned container.
