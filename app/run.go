@@ -14,6 +14,11 @@ func Run(args []string) {
 		utils.QuitFatal()
 	}
 
+	if utils.GlobalOptions.Version {
+		utils.LogMessage("Version: %s\r\n", utils.BusanVersion)
+		utils.QuitSuccess()
+	}
+
 	if len(args) == 1 {
 		utils.LogMessage("Usage: %s [OPTIONS] DOCKER_FILE_DIRECTORY\r\n", args[0])
 		utils.QuitFatal()
