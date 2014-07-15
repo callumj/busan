@@ -142,7 +142,7 @@ func CreateContainer(conf ContainerConfig) (ActiveContainers, error) {
 	}
 
 	nativeConf.Image = conf.Image.Image.ID
-	nativeConf.Hostname = fmt.Sprintf("%s-%s", utils.GlobalOptions, conf.Image.Version)
+	nativeConf.Env = []string{fmt.Sprintf("NAME=%s", utils.GlobalOptions.Name), fmt.Sprintf("VERSION=%s", conf.Image.Version)}
 	opts := docker.CreateContainerOptions{
 		Name:   utils.GlobalOptions.Name,
 		Config: &nativeConf,
