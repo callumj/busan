@@ -33,7 +33,7 @@ if ! [ -n "$VET" ]
 then
   echo "All good"
   mkdir -p tmp/go
-  mkdir builds/**
+  mkdir -p builds/
   mkdir tmp/go/src tmp/go/bin tmp/go/pkg
   mkdir -p tmp/go/src/github.com/callumj/busan
   cp -R app remote utils main.go tmp/go/src/github.com/callumj/busan/
