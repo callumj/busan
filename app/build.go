@@ -101,9 +101,10 @@ func UploadImage(version, dockerFile string) (VersionImage, error) {
 	tw := tar.NewWriter(tarBuf)
 
 	walkFn := func(path string, info os.FileInfo, err error) error {
+		finalPath := strings.TrimPrefix(strings.TrimPrefix(path, directory), "/")
 		if !info.IsDir() {
 			hdr := &tar.Header{
-				Name: info.Name(),
+				Name: finalPath,
 				Size: info.Size(),
 			}
 			tw.WriteHeader(hdr)
